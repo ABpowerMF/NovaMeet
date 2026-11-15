@@ -46,6 +46,8 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ steps.proj.outputs.dir }}
         run: |
+          # Installers are attached to releases by this workflow, not by electron-builder.
+          npm pkg set build.publish=null --json
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build app
@@ -58,7 +60,6 @@ jobs:
         env:
           # No code-signing certificate yet: build unsigned installers.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
