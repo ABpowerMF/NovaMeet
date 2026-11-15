@@ -1,0 +1,9 @@
+html,body,#root{margin:0;height:100%;background:transparent;overflow:hidden}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;user-select:none}
+*{box-sizing:border-box}
+.stage{display:flex;justify-content:center;align-items:flex-start;height:100%;padding:0 22px}
+.notch{position:relative}
+.stage .notch{box-shadow:0 10px 26px rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.05)}
+.notch .np-title{max-width:250px}
+.np-btn{white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}
