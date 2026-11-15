@@ -18,28 +18,42 @@ jobs:
         include:
           - os: windows-latest
             target: --win
-            files: |
-              dist/*.exe
+            ext: exe
           - os: macos-latest
             target: --mac
-            files: |
-              dist/*.dmg
+            ext: dmg
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
+      # Works whether the project is at the top of the repo or inside a subfolder.
+      - name: Find project folder
+        id: proj
+        run: |
+          pkg=$(find . -name package.json -not -path "*/node_modules/*" | awk '{ print length, $0 }' | sort -n | head -1 | cut -d' ' -f2-)
+          if [ -z "$pkg" ]; then echo "::error::package.json not found in the repository"; exit 1; fi
+          dir=$(dirname "$pkg")
+          echo "Project folder: $dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
-        run: npm ci
+        working-directory: ${{ steps.proj.outputs.dir }}
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build app
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: npx electron-vite build
 
       - name: Package installer
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: npx electron-builder ${{ matrix.target }} --publish never
         env:
           # No code-signing certificate yet: build unsigned installers.
@@ -50,11 +64,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NovaMeet-${{ runner.os }}
-          path: ${{ matrix.files }}
+          path: ${{ steps.proj.outputs.dir }}/dist/*.${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Attach to GitHub release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.files }}
+          files: ${{ steps.proj.outputs.dir }}/dist/*.${{ matrix.ext }}
