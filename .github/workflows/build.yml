@@ -1,0 +1,60 @@
+name: Build NovaMeet
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+            files: |
+              dist/*.exe
+          - os: macos-latest
+            target: --mac
+            files: |
+              dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npx electron-vite build
+
+      - name: Package installer
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          # No code-signing certificate yet: build unsigned installers.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaMeet-${{ runner.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+      - name: Attach to GitHub release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.files }}
